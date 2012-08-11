@@ -15,17 +15,23 @@ static int32_t integral = 0, prev_error = 0;
 #define MAX_DELAY 9000
 #define MIN_DELAY 1000
 
-#define BAUD_RATE   19200
+#define FOSC 2000000
+#define BAUD 9600
+#define MYUBRR (FOSC/16/BAUD-1)
+
+#define sbi(var, mask)   ((var) |= (uint8_t)(1 << mask))
+#define cbi(var, mask)   ((var) &= (uint8_t)~(1 << mask))
 
 uint16_t readADC(uint8_t ch);
 double getDelayFromPercetage(uint16_t power);
 uint16_t pid_correct(int16_t currentTemp, uint16_t expectedTemp);
 
 void uart_init(void);
-int uart_putch(char ch, FILE *stream);
-int uart_getch(FILE *stream);
-/* Assign I/O stream to UART */FILE uart_str =
-		FDEV_SETUP_STREAM(uart_putch, uart_getch, _FDEV_SETUP_RW);
+static int uart_putchar(char c, FILE *stream);
+uint8_t uart_getchar(void);
+
+static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
+
 
 int main(void) {
 
