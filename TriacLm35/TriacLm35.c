@@ -39,8 +39,6 @@ int main(void) {
 	uint16_t currentTempRead = 4;
 	uint16_t correction = 0;
 
-	/* Define Output/Input Stream */
-	stdout= stdin = &uart_str;
 	uart_init();
 
 	/* ADC Setup*/ADMUX = (1 << REFS0);
@@ -163,36 +161,30 @@ double getDelayFromPercetage(uint16_t power) {
 }
 
 void uart_init(void) {
-	UBRRH = (((F_CPU / BAUD_RATE) / 16) - 1) >> 8;		// set baud rate
-	UBRRL = (((F_CPU / BAUD_RATE) / 16) - 1);
+    DDRD = 0b11111110; //PORTD (RX on PD0)
 
-	/* Enable Tx and Rx */UCSRB = (1 << RXEN) | (1 << TXEN);
-
-	/* Set Frame: Data 8 Bit, No Parity and 1 Stop Bit */
-	UCSRC = (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0);
+    //USART Baud rate: 9600
+    UBRRH = MYUBRR >> 8;
+    UBRRL = MYUBRR;
+    UCSRB = (1<<RXEN)|(1<<TXEN);
+    /* Set frame format: 8data, 2stop bit */
+    UCSRC = (1 << URSEL) | (1 << USBS) | (3 << UCSZ0);
+    stdout = &mystdout; //Required for printf init
 }
 
-int uart_putch(char ch, FILE *stream) {
-	if (ch == '\n')
-		uart_putch('\r', stream);
+static int uart_putchar(char c, FILE *stream)
+{
+    if (c == '\n') uart_putchar('\r', stream);
 
-	while (!(UCSRA & (1 << UDRE)))
-		;
-	UDR = ch;
+    loop_until_bit_is_set(UCSRA, UDRE);
+    UDR = c;
 
-	return 0;
+    return 0;
 }
 
-int uart_getch(FILE *stream) {
-	unsigned char ch;
-
-	while (!(UCSRA & (1 << RXC)))
-		;
-	ch = UDR;
-
-	/* Echo the output back to the terminal */
-	uart_putch(ch, stream);
-
-	return ch;
+uint8_t uart_getchar(void)
+{
+    while( !(UCSRA & (1<<RXC)) );
+    return(UDR);
 }
 
