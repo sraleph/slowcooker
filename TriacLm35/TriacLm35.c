@@ -68,6 +68,7 @@ int main(void) {
 	while (1) {
 		if (fire == true) {
 			fire = false;
+
 			count++;
 			if (count == 0) {
 				PORTC &= ~_BV(PC0);
