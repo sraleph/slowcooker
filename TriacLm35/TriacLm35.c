@@ -12,10 +12,10 @@ static int32_t integral = 0, prev_error = 0;
 
 #define SENSOR_CHANNEL 5
 
-#define MAX_DELAY 9000
+#define MAX_DELAY 8000
 #define MIN_DELAY 1000
 
-#define FOSC 2000000
+#define FOSC 8000000
 #define BAUD 9600
 #define MYUBRR (FOSC/16/BAUD-1)
 
@@ -31,7 +31,6 @@ static int uart_putchar(char c, FILE *stream);
 uint8_t uart_getchar(void);
 
 static FILE mystdout = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
-
 
 int main(void) {
 
@@ -60,7 +59,9 @@ int main(void) {
 
 	GICR |= (1 << INT0);      // Turns on INT0
 
+	_delay_ms(100);
 	expectedTemp = readADC(SENSOR_CHANNEL) + 4;
+	printf("Initial expected temp:  %u\n", expectedTemp);
 
 	sei();
 	// turn on interrupts
@@ -70,24 +71,23 @@ int main(void) {
 			fire = false;
 
 			count++;
-			if (count == 0) {
-				PORTC &= ~_BV(PC0);
-				correction = pid_correct(currentTempRead, expectedTemp);
-				delay = getDelayFromPercetage(correction);
-			} else if (count == 128) {
-				PORTC |= _BV(PC0);
-			}
 
-			_delay_us(delay - 500);
+			//_delay_us(delay);
+			_delay_ms(delay / 1000);
 			PORTC |= _BV(PC1);
-			_delay_us(500);
+			_delay_us(40);
 			PORTC &= ~_BV(PC1);
 
-			// Read ADC as a last thing so that AC sync is not affected
 			currentTempRead = readADC(SENSOR_CHANNEL);
+			correction = pid_correct(currentTempRead, expectedTemp);
+			delay = getDelayFromPercetage(correction);
 			if (count == 0) {
-				printf("\n\nDelay:  %f \n", delay);
-				printf("\n\nCorrection: %d  \n", correction);
+				PORTC &= ~_BV(PC0);
+			} else if (count == 128) {
+				PORTC |= _BV(PC0);
+				printf("Delay,  %u , Correction, %u, Temp,  %u \n",
+						(unsigned int) delay, (unsigned int) correction,
+						(unsigned int) currentTempRead);
 			}
 
 		}
@@ -142,6 +142,7 @@ uint16_t pid_correct(int16_t currentTemp, uint16_t expectedTemp) {
 
 	//the final sum, with an overflow check
 	int32_t temp_pid_sum = proportional + integral + differential;
+	//printf("Proportional, %lld , Differential, %lld, Integral, %lld", (long long int)proportional,  (long long int)differential,  (long long int)integral);
 	uint16_t pid_total;
 	//set max pwm value at ~95% of 2^16 (change this to whatever you like)
 	if (temp_pid_sum > 62258)
@@ -162,30 +163,30 @@ double getDelayFromPercetage(uint16_t power) {
 }
 
 void uart_init(void) {
-    DDRD = 0b11111110; //PORTD (RX on PD0)
+	DDRD = 0b11111110; //PORTD (RX on PD0)
 
-    //USART Baud rate: 9600
-    UBRRH = MYUBRR >> 8;
-    UBRRL = MYUBRR;
-    UCSRB = (1<<RXEN)|(1<<TXEN);
-    /* Set frame format: 8data, 2stop bit */
-    UCSRC = (1 << URSEL) | (1 << USBS) | (3 << UCSZ0);
-    stdout = &mystdout; //Required for printf init
+	//USART Baud rate: 9600
+	UBRRH = MYUBRR >> 8;
+	UBRRL = MYUBRR;
+	UCSRB = (1 << RXEN) | (1 << TXEN);
+	/* Set frame format: 8data, 2stop bit */UCSRC = (1 << URSEL) | (1 << USBS)
+			| (3 << UCSZ0);
+	stdout= &mystdout; //Required for printf init
 }
 
-static int uart_putchar(char c, FILE *stream)
-{
-    if (c == '\n') uart_putchar('\r', stream);
+static int uart_putchar(char c, FILE *stream) {
+	if (c == '\n')
+		uart_putchar('\r', stream);
 
-    loop_until_bit_is_set(UCSRA, UDRE);
-    UDR = c;
+	loop_until_bit_is_set(UCSRA, UDRE);
+	UDR = c;
 
-    return 0;
+	return 0;
 }
 
-uint8_t uart_getchar(void)
-{
-    while( !(UCSRA & (1<<RXC)) );
-    return(UDR);
+uint8_t uart_getchar(void) {
+	while (!(UCSRA & (1 << RXC)))
+		;
+	return (UDR );
 }
 
