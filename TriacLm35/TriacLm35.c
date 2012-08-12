@@ -5,7 +5,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-static volatile bool fire = false;
 static uint8_t count = 0;
 static double delay = 1;
 static int32_t integral = 0, prev_error = 0;
@@ -63,40 +62,52 @@ int main(void) {
 	expectedTemp = readADC(SENSOR_CHANNEL) + 4;
 	printf("Initial expected temp:  %u\n", expectedTemp);
 
-	sei();
-	// turn on interrupts
+	TCCR1B |= (1 << WGM12);
+	// Mode 4, CTC on OCR1A
+
+	TIMSK |= (1 << OCIE1A);
+	//Set interrupt on compare match
+
 
 	while (1) {
-		if (fire == true) {
-			fire = false;
+		count++;
 
-			count++;
+		_delay_ms(100);
 
-			_delay_us(delay);
-			//_delay_ms(delay / 1000);
-			PORTC |= _BV(PC1);
-			_delay_us(40);
-			PORTC &= ~_BV(PC1);
+		currentTempRead = readADC(SENSOR_CHANNEL);
+		correction = pid_correct(currentTempRead, expectedTemp);
+		delay = getDelayFromPercetage(correction);
+		cli();
+		OCR1A = (uint16_t)(delay / 128.0);
+		sei();
+		printf("Delay,  %u , Correction, %u, Temp,  %u \n",
+				(unsigned int) delay, (unsigned int) correction,
+				(unsigned int) currentTempRead);
 
-			currentTempRead = readADC(SENSOR_CHANNEL);
-			correction = pid_correct(currentTempRead, expectedTemp);
-			delay = getDelayFromPercetage(correction);
-			if (count == 0) {
-				PORTC &= ~_BV(PC0);
-			} else if (count == 128) {
-				PORTC |= _BV(PC0);
-				printf("Delay,  %u , Correction, %u, Temp,  %u \n",
-						(unsigned int) delay, (unsigned int) correction,
-						(unsigned int) currentTempRead);
-			}
-
+		if (count == 0) {
+			PORTC &= ~_BV(PC0);
+		} else if (count == 128) {
+			PORTC |= _BV(PC0);
 		}
+
 	}
 }
 
 ISR( INT0_vect) {
-	//fire once ever 256 cycles (5seg)
-	fire = true;
+	TCCR1B |= (1 << CS12) | (1 << CS10);
+	// set prescaler to 1024 and start the timer
+	//UDR = 'b';
+}
+
+ISR (TIMER1_COMPA_vect) {
+	// stop timer
+	TCCR1B &= ~((1 << CS12) | (1 << CS10));
+
+	//generate triac activating pulse
+	PORTC |= _BV(PC1);
+	_delay_us(40);
+	PORTC &= ~_BV(PC1);
+	//UDR = 'a';
 }
 
 uint16_t readADC(uint8_t ch) {
