@@ -72,8 +72,8 @@ int main(void) {
 
 			count++;
 
-			//_delay_us(delay);
-			_delay_ms(delay / 1000);
+			_delay_us(delay);
+			//_delay_ms(delay / 1000);
 			PORTC |= _BV(PC1);
 			_delay_us(40);
 			PORTC &= ~_BV(PC1);
