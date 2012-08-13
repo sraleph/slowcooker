@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 static uint8_t count = 0;
 static double delay = 1;
@@ -38,6 +39,9 @@ int main(void) {
 	uint16_t correction = 0;
 
 	uart_init();
+
+	printf("MCUCSR at startup %1x \n",MCUCSR);
+	MCUCSR = 0;
 
 	/* ADC Setup*/ADMUX = (1 << REFS0);
 	ADCSRA = (1 << ADEN) | (1 << ADPS2) | (0 << ADPS1) | (0 << ADPS0); //Enable ADC with Prescalar=Fcpu/16 (2Mhz/16=62500 hz)
@@ -78,14 +82,14 @@ int main(void) {
 		correction = pid_correct(currentTempRead, expectedTemp);
 		delay = getDelayFromPercetage(correction);
 		cli();
-		OCR1A = (uint16_t)(delay / 128.0);
+		OCR1A = (uint16_t)(delay / (128.0));
 		sei();
-		printf("Delay,  %u , Correction, %u, Temp,  %u \n",
-				(unsigned int) delay, (unsigned int) correction,
-				(unsigned int) currentTempRead);
 
-		if (count == 0) {
+		if ((count & 0x0F) == 0) {
 			PORTC &= ~_BV(PC0);
+			printf("Delay,  %u , Correction, %2u, Temp,  %2u \n",
+					(uint16_t)delay, correction,
+					currentTempRead);
 		} else if (count == 128) {
 			PORTC |= _BV(PC0);
 		}
@@ -94,9 +98,8 @@ int main(void) {
 }
 
 ISR( INT0_vect) {
-	TCCR1B |= (1 << CS12) | (1 << CS10);
 	// set prescaler to 1024 and start the timer
-	//UDR = 'b';
+	TCCR1B |= (1 << CS12) | (1 << CS10);
 }
 
 ISR (TIMER1_COMPA_vect) {
