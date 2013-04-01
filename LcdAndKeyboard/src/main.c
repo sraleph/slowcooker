@@ -5,25 +5,43 @@
 
 #include "keyb.h"
 
+#define LED PC1
+// Some macros that make the code more readable
+#define output_low(port,pin) port &= ~(1<<pin)
+#define output_high(port,pin) port |= (1<<pin)
+#define set_input(portdir,pin) portdir &= ~(1<<pin)
+#define set_output(portdir,pin) portdir |= (1<<pin)
 
-
-
-
-void main()
+int main()
 {
    uint8_t key = 69;
    uint8_t count = 0;
 
+   //set_output(DDRC, LED);
    //Initialize LCD module
    /*LCDInit(LS_BLINK|LS_ULINE);*/
-   LCDInit(0);
+   LCDInit(LS_BLINK|LS_ULINE);
 
    //Clear the screen
+
+
    LCDClear();
 
    //Simple string printing
-   LCDWriteString("Congrats ");
 
+   LCDWriteString("Salimooo ");
+   _delay_ms(1000);
+
+
+//   while (1) {
+//     // turn on the LED for 200ms
+//     output_high(PORTC, LED);
+//     _delay_ms(200);
+//     // now turn off the LED for another 200ms
+//     output_low(PORTC, LED);
+//     _delay_ms(200);
+//     // now start over
+//   }
    //Clear the screen
    LCDClear();
 
@@ -50,6 +68,7 @@ void main()
 	   		   LCDWriteStringXY(0,1,"          ");
 	   		   LCDGotoXY(0,1);
 	   		   LCDWriteInt(convertKeyToNumber(key),1);
+	   		   //LCDWriteInt(key,2);
 	   		   break;
 
 	   }

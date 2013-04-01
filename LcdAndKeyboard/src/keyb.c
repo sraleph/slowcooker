@@ -39,7 +39,7 @@ uint8_t GetKeyPressed()
 
     	 KEY_ROW_DDR |= (0b00000001 << (ROW_PORT_SHIFT+r));
     	 KEY_ROW_PORT &= ~(0b00000001 << (ROW_PORT_SHIFT+r));
-    	 _delay_us(1);
+    	 _delay_us(3);
     	 if(!(KEY_COL_PIN & (0X01<<(COL_PORT_SHIFT + c))))
          {
     		  KEY_ROW_DDR &= ~(0b00001111 << ROW_PORT_SHIFT);
