@@ -13,8 +13,8 @@
 #define ROW_PORT_SHIFT 3
 
 //Change according to mapping
-#define KEY_STAR 9
-#define KEY_SHARP 11
+#define KEY_STAR 0xFE
+#define KEY_SHARP 0xFD
 
 
 //Definitions not meant to be changed
@@ -29,7 +29,7 @@
 #define KEY_ROW_PIN PIN(KEY_ROW)
 #define KEY_COL_PIN PIN(KEY_COL)
 
-uint8_t convertKeyToNumber(uint8_t number);
+uint8_t convertKeyToNumberOrKey(uint8_t number);
 uint8_t GetKeyPressed();
 
 #endif

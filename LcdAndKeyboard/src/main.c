@@ -4,77 +4,85 @@
 #include "lcd.h"
 
 #include "keyb.h"
+#include "menuManager.h"
+#include "menuManagerStates.h"
 
-#define LED PC1
-// Some macros that make the code more readable
-#define output_low(port,pin) port &= ~(1<<pin)
-#define output_high(port,pin) port |= (1<<pin)
-#define set_input(portdir,pin) portdir &= ~(1<<pin)
-#define set_output(portdir,pin) portdir |= (1<<pin)
 
 int main()
 {
    uint8_t key = 69;
    uint8_t count = 0;
+   uint8_t releasedCount = 0;
+   uint8_t gain = 0;
 
-   //set_output(DDRC, LED);
+   menuManager menu;
+   menuState menuState[3];
+   keyboardUint8InputContext inputCtx;
+   simpleMenuContext simpleMenuCtx;
+   displayUint8Context displayContext;
+
+   menu.currentState = 0;
+   menu.states = &menuState[0];
+
+   menuState[0].onkey=&simpleMenu;
+   menuState[0].transitions[0]=0;
+   menuState[0].transitions[1]=0;
+   menuState[0].transitions[2]=1;
+   menuState[0].transitions[3]=2;
+   menuState[0].stateContext=&simpleMenuCtx;
+   simpleMenuCtx.currsor=0;
+   simpleMenuCtx.entryAmt=3;
+   simpleMenuCtx.entries[0]="Do Nothing";
+   simpleMenuCtx.entries[1]="Edit Gain";
+   simpleMenuCtx.entries[2]="View Gain";
+
+   menuState[1].onkey=&keyboardUint8Input;
+   menuState[1].transitions[0]=2;
+   menuState[1].transitions[1]=2;
+   menuState[1].stateContext=&inputCtx;
+   inputCtx.tmpBuffer=0;
+   inputCtx.variableToChange=&gain;
+
+   menuState[2].onkey=&displayUint8;
+   menuState[2].transitions[0]=0;
+   menuState[2].transitions[1]=1;
+   menuState[2].stateContext=&displayContext;
+   displayContext.title="Gain:";
+   displayContext.variableToDisplay=&gain;
+
+
    //Initialize LCD module
-   /*LCDInit(LS_BLINK|LS_ULINE);*/
-   LCDInit(LS_BLINK|LS_ULINE);
+   LCDInit(0);
 
    //Clear the screen
-
-
    LCDClear();
 
    //Simple string printing
-
    LCDWriteString("Salimooo ");
    _delay_ms(1000);
 
 
-//   while (1) {
-//     // turn on the LED for 200ms
-//     output_high(PORTC, LED);
-//     _delay_ms(200);
-//     // now turn off the LED for another 200ms
-//     output_low(PORTC, LED);
-//     _delay_ms(200);
-//     // now start over
-//   }
    //Clear the screen
    LCDClear();
-
-   //Some more text
-   _delay_ms(500);
+   //Force initial paint of menu
+   onKey(&menu,MENU_MANAGER_KEY_NOKEY);
 
    while (1){
-	   count++;
-	   //LCDClear();
 	   key = GetKeyPressed();
-	   LCDWriteStringXY(0,0,"Count:");
-	   LCDWriteInt(count,3);
+
+	   if(key != KEY_NOKEY && releasedCount < 150 ) continue;
+
 	   switch (key){
-	   	   case (KEY_SHARP):
-			   LCDWriteStringXY(0,1,"#        ");
-	   			break;
-	   	   case (KEY_STAR):
-				LCDWriteStringXY(0,1,"*       ");
-			   	break;
 	   	   case (KEY_NOKEY):
-				LCDWriteStringXY(0,1,"NO KEY");
-	   	   	    break;
+	   	   	   	if (releasedCount < 200){
+	   	   	   		releasedCount++;
+	   	   	   	}
+	   	   	   	break;
 	   	   default:
-	   		   LCDWriteStringXY(0,1,"          ");
-	   		   LCDGotoXY(0,1);
-	   		   LCDWriteInt(convertKeyToNumber(key),1);
-	   		   //LCDWriteInt(key,2);
+	   		   releasedCount = 0;
+	   		   count++;
+	   		   onKey(&menu,convertKeyToNumberOrKey(key));
 	   		   break;
-
 	   }
-	   //_delay_ms(100);
-
-   }
-
+	}
 }
-

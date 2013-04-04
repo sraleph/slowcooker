@@ -1,11 +1,16 @@
 #include "keyb.h"
 
-uint8_t convertKeyToNumber(uint8_t number){
-	uint8_t result = number + 1;
-	if (result == 11){
+uint8_t convertKeyToNumberOrKey(uint8_t number){
+	if (number == 10){
 		return 0;
 	}
-	return result;
+	if (number == 11){
+		return KEY_SHARP;
+	}
+	if(number==9){
+		return KEY_STAR;
+	}
+	return number + 1;
 }
 
 /*
