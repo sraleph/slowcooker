@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include "ntctemp/ntctemp.h"
 
 static uint8_t count = 0;
 static double delay = 1;
@@ -21,6 +22,8 @@ static int32_t integral = 0, prev_error = 0;
 
 #define sbi(var, mask)   ((var) |= (uint8_t)(1 << mask))
 #define cbi(var, mask)   ((var) &= (uint8_t)~(1 << mask))
+
+#define SCALE_FACT 100
 
 uint16_t readADC(uint8_t ch);
 double getDelayFromPercetage(uint16_t power);
@@ -63,7 +66,7 @@ int main(void) {
 	GICR |= (1 << INT0);      // Turns on INT0
 
 	_delay_ms(100);
-	expectedTemp = readADC(SENSOR_CHANNEL) + 4;
+	expectedTemp = 30u*SCALE_FACT;
 	printf("Initial expected temp:  %u\n", expectedTemp);
 
 	TCCR1B |= (1 << WGM12);
@@ -78,7 +81,7 @@ int main(void) {
 
 		_delay_ms(100);
 
-		currentTempRead = readADC(SENSOR_CHANNEL);
+		currentTempRead = ntctemp_getLookup(readADC(SENSOR_CHANNEL))*SCALE_FACT;
 		correction = pid_correct(currentTempRead, expectedTemp);
 		delay = getDelayFromPercetage(correction);
 		cli();
