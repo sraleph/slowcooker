@@ -16,6 +16,11 @@ static int32_t integral = 0, prev_error = 0;
 #define MAX_DELAY 8000
 #define MIN_DELAY 1000
 
+#define GAIN_PROP 100
+#define GAIN_DIFF  70
+#define GAIN_INT 10
+
+
 #define FOSC 8000000
 #define BAUD 9600
 #define MYUBRR (FOSC/16/BAUD-1)
@@ -79,7 +84,7 @@ int main(void) {
 	while (1) {
 		count++;
 
-		_delay_ms(100);
+		_delay_ms(1000);
 
 		currentTempRead = ntctemp_getLookup(readADC(SENSOR_CHANNEL))*SCALE_FACT;
 		correction = pid_correct(currentTempRead, expectedTemp);
@@ -87,12 +92,10 @@ int main(void) {
 		cli();
 		OCR1A = (uint16_t)(delay / (128.0));
 		sei();
-
+		printf("Delay,  %u , Correction, %2u, Temp,  %2u \n", (uint16_t)delay, correction, currentTempRead);
 		if ((count & 0x0F) == 0) {
 			PORTC &= ~_BV(PC0);
-			printf("Delay,  %u , Correction, %2u, Temp,  %2u \n",
-					(uint16_t)delay, correction,
-					currentTempRead);
+			//printf("Delay,  %u , Correction, %2u, Temp,  %2u \n", (uint16_t)delay, correction, currentTempRead);
 		} else if (count == 128) {
 			PORTC |= _BV(PC0);
 		}
@@ -142,10 +145,10 @@ uint16_t pid_correct(int16_t currentTemp, uint16_t expectedTemp) {
 	//int16_t error = ((int16_t) SET_POINT) - plant_value;
 
 	//proportional * pGain
-	int32_t proportional = error * 200;
+	int32_t proportional = error * GAIN_PROP;
 
 	//integral * iGain
-	int32_t temp_sum = integral + (error * 10);
+	int32_t temp_sum = integral + (error * GAIN_INT);
 	//check that the integral doesn't get out of the desired range
 	if (temp_sum > 0xFFFF)
 		integral = 0xFFFF;
@@ -155,10 +158,11 @@ uint16_t pid_correct(int16_t currentTemp, uint16_t expectedTemp) {
 		integral = temp_sum;
 
 	//differential * dGain
-	int32_t differential = ((prev_error - error) * 20);
+	int32_t differential = ((prev_error - error) * GAIN_DIFF);
 
 	//the final sum, with an overflow check
 	int32_t temp_pid_sum = proportional + integral + differential;
+	printf("Prop,  %li , Integral, %li, Diff,  %li ", proportional, integral, differential);
 	//printf("Proportional, %lld , Differential, %lld, Integral, %lld", (long long int)proportional,  (long long int)differential,  (long long int)integral);
 	uint16_t pid_total;
 	//set max pwm value at ~95% of 2^16 (change this to whatever you like)
@@ -168,7 +172,6 @@ uint16_t pid_correct(int16_t currentTemp, uint16_t expectedTemp) {
 		pid_total = 0;
 	else
 		pid_total = (uint16_t) temp_pid_sum;
-
 	//store the previous error
 	prev_error = error;
 	return pid_total;
